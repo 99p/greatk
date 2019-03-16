@@ -2,16 +2,14 @@ import tkinter as tk
 from ctypes import windll
 
 class App(tk.Tk):
-    def __init__(self):
+    def __init__(self, width=480, height=280, title='The Great App', title_fg='ghostwhite', title_bg='turquoise', title_accent='aquamarine'):
         self.Init()
-        self.Geometry(480, 280)
-        self.Title('The Great App')
-        self.SetGrips()
-
+        self.Geometry(width, height)
+        self.Title(title, title_fg, title_bg, title_accent)
 
     def Init(self):
         super().__init__()
-        self.screenX, self.screenY = windll.user32.GetSystemMetrics(78), windll.user32.GetSystemMetrics(79)
+        self.entire_multi_screen_x, self.entire_multi_screen_y = windll.user32.GetSystemMetrics(78), windll.user32.GetSystemMetrics(79)
         self.bind('q', lambda e:self.destroy())
         self.bind('<Alt-m>', self.Iconify)
         self.b1 = self.bind("<ButtonPress-1>", self.StartMove)
@@ -21,7 +19,7 @@ class App(tk.Tk):
         self.after(10, lambda: self.SetAppwindow())
         self.after(11, lambda:windll.user32.SetForegroundWindow(windll.user32.GetParent(self.winfo_id())))
 
-    def Title(self, title='The Great App', fg='ghostwhite', bg='turquoise', setButton=False):
+    def Title(self, title='The Great App', fg='ghostwhite', bg='turquoise', grips='aquamarine', setButton=False):
         self.title_bg_color = bg
         if not setButton:
             self.title(title)
@@ -40,6 +38,7 @@ class App(tk.Tk):
             self.iconify_button = tk.Canvas(self.title_frame, width=16, height=16 , bg=bg, highlightthickness=0)
             self.iconify_button.create_oval(0,0,13,13, fill='goldenrod', activefill='gold', outline='')
             self.iconify_button.bind("<ButtonPress-1>", self.Iconify)
+            self.SetGrips(grips)
         self.quit_button.place(anchor='ne', x=self.title_frame.winfo_width()-5, y=3)
         self.maximize_button.place(anchor='ne', x=self.title_frame.winfo_width()-25, y=3)
         self.iconify_button.place(anchor='ne', x=self.title_frame.winfo_width()-45, y=3)
@@ -54,18 +53,22 @@ class App(tk.Tk):
         self.geometry(f"{x}x{y}+{positionRight}+{positionDown}")
 
     def MaximizeWindow(self, event):
-        if self.winfo_height() < self.winfo_screenheight():
-            self.beforeX = self.winfo_width()
-            self.beforeY = self.winfo_height()
-            self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
+        if self.winfo_height() != self.winfo_screenheight() and self.winfo_width() != self.winfo_screenwidth():
+            self.before_geometry = self.geometry()
+            if self.winfo_rootx() > self.winfo_screenwidth():
+                self.geometry(f"{self.entire_multi_screen_x - self.winfo_screenwidth()}x{self.entire_multi_screen_y}+{self.winfo_screenwidth()}+0")
+            else:
+                self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
             self.update()
             self.Title(setButton=True)
-        elif hasattr(self, 'beforeX'):
-            self.Geometry(self.beforeX, self.beforeY)
+        elif hasattr(self, 'before_geometry'):
+            self.geometry(self.before_geometry)
             self.update()
             self.Title(setButton=True)
         else:
             self.Geometry(self.initialX, self.initialY)
+            self.update()
+            self.Title(setButton=True)
 
     def StartMove(self, event):
         self.x = event.x
@@ -121,17 +124,16 @@ class App(tk.Tk):
             H = 150 if (y-self.north) < 150 else (y-self.north)
             X, Y = self.west, self.north
         self.geometry(f"{W}x{H}+{X}+{Y}")
-        print(self.geometry())
         self.Title(setButton=True)
 
-    def SetGrips(self):
-        self.grip_nw = tk.Canvas(name="grip_nw", width=5, height=5, cursor="ul_angle",highlightthickness=0)
-        self.grip_nw.create_rectangle(0,0,5,5,fill="aquamarine",outline="")
+    def SetGrips(self, grips="aquamarine"):
+        self.grip_nw = tk.Canvas(name="grip_nw", width=3, height=22, cursor="ul_angle",highlightthickness=0)
+        self.grip_nw.create_rectangle(0,0,3,22,fill=grips,outline="")
         self.grip_nw.place(relx=0, rely=0, anchor="nw")
         self.grip_nw.bind("<ButtonPress-1>", self.StartResize)
         self.grip_nw.bind("<ButtonRelease-1>", self.StopResize)
-        self.grip_ne = tk.Canvas(name="grip_ne", width=5, height=5, cursor="ur_angle",highlightthickness=0)
-        self.grip_ne.create_rectangle(0,0,5,5,fill="aquamarine",outline="")
+        self.grip_ne = tk.Canvas(name="grip_ne", width=3, height=22, cursor="ur_angle",highlightthickness=0)
+        self.grip_ne.create_rectangle(0,0,3,22,fill=grips,outline="")
         self.grip_ne.place(relx=1.0, rely=0, anchor="ne")
         self.grip_ne.bind("<ButtonPress-1>", self.StartResize)
         self.grip_ne.bind("<ButtonRelease-1>", self.StopResize)
@@ -163,5 +165,10 @@ class App(tk.Tk):
     def Iconify(self, event):
         windll.user32.ShowWindow(windll.user32.GetParent(self.winfo_id()),6)
 
-app=App()
-app.mainloop()
+class wow(App):
+    def __init__(self):
+        super().__init__()
+        print('wow')
+
+v = wow()
+v.mainloop()
