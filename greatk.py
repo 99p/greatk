@@ -1,33 +1,47 @@
 import tkinter as tk
 from ctypes import windll
+from io import BytesIO
+from urllib.request import urlopen
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    print("wow! can't import pillow!" )
 
-class GreaTK(tk.Tk):
-    def __init__(self, width=480, height=280, title='The Great App', title_fg='ghostwhite', title_bg='turquoise', title_accent='aquamarine'):
+
+class greatk(tk.Tk):
+    def __init__(self, great=True, width=480, height=280, title='The Great App', title_fg='ghostwhite', title_bg='turquoise', title_accent='aquamarine'):
         self.Init()
         self.Geometry(width, height)
-        self.Title(title, title_fg, title_bg, title_accent)
+        if great:
+            self.Title(title, title_fg, title_bg, title_accent)
+        else:
+            self.title(title)
 
     def Init(self):
         super().__init__()
         self.entire_multi_screen_x, self.entire_multi_screen_y = windll.user32.GetSystemMetrics(78), windll.user32.GetSystemMetrics(79)
         self.bind('q', lambda e:self.destroy())
         self.bind('<Alt-m>', self.Iconify)
-        self.b1 = self.bind("<ButtonPress-1>", self.StartMove)
-        self.b2 = self.bind("<ButtonRelease-1>", self.StopMove)
-        self.b3 = self.bind("<B1-Motion>", self.MoveWindow)
-        self.overrideredirect(True)
+        self.bind("<ButtonPress-3>", self.StartMove)
+        self.bind("<ButtonRelease-3>", self.StopMove)
+        self.bind("<B3-Motion>", self.MoveWindow)
         self.after(10, lambda: self.SetAppwindow())
         self.after(11, lambda:windll.user32.SetForegroundWindow(windll.user32.GetParent(self.winfo_id())))
+        self.fullscreen = False
 
     def Title(self, title='The Great App', fg='ghostwhite', bg='turquoise', grips='aquamarine', setButton=False):
         self.title_bg_color = bg
         if not setButton:
+            self.overrideredirect(True)
             self.title(title)
-            self.title_frame = tk.Frame(self, height=22, bg=bg)
+            self.title_frame = tk.Frame(self, bg=bg)
             self.title_frame.pack(fill='both')
-            self.title_label = tk.Label(self.title_frame, text=title, fg=fg, bg=bg, font='Tahoma 10 bold')
+            self.title_label = tk.Label(self.title_frame, height=1, text=title, fg=fg, bg=bg, font='Tahoma 10 bold')
             self.title_label.pack(fill='both')
             self.title_label.bind('<Double-Button-1>', self.MaximizeWindow)
+            self.title_label.bind("<ButtonPress-1>", self.StartMove)
+            self.title_label.bind("<ButtonRelease-1>", self.StopMove)
+            self.title_label.bind("<B1-Motion>", self.MoveWindow)
             self.update()
             self.quit_button = tk.Canvas(self.title_frame, width=16, height=16 , bg=bg, highlightthickness=0)
             self.quit_button.create_oval(0,0,13,13, fill='darkred', activefill='red', outline='')
@@ -61,14 +75,17 @@ class GreaTK(tk.Tk):
                 self.geometry(f"{self.winfo_screenwidth()}x{self.winfo_screenheight()}+0+0")
             self.update()
             self.Title(setButton=True)
+            self.fullscreen = True
         elif hasattr(self, 'before_geometry'):
             self.geometry(self.before_geometry)
             self.update()
             self.Title(setButton=True)
+            self.fullscreen = False
         else:
             self.Geometry(self.initialX, self.initialY)
             self.update()
             self.Title(setButton=True)
+            self.fullscreen = False
 
     def StartMove(self, event):
         self.x = event.x
@@ -79,16 +96,14 @@ class GreaTK(tk.Tk):
         self.y = None
 
     def MoveWindow(self, event):
-        deltax = event.x - self.x
-        deltay = event.y - self.y
-        x = self.winfo_x() + deltax
-        y = self.winfo_y() + deltay
-        self.geometry(f"+{x}+{y}")
+        if not self.fullscreen:
+            deltax = event.x - self.x
+            deltay = event.y - self.y
+            x = self.winfo_x() + deltax
+            y = self.winfo_y() + deltay
+            self.geometry(f"+{x}+{y}")
 
     def StartResize(self, event):
-        self.unbind("<ButtonPress-1>", self.b1)
-        self.unbind("<ButtonRelease-1>", self.b2)
-        self.unbind("<B1-Motion>", self.b3)
         self.b4 = self.bind("<B1-Motion>", self.ResizeWindow)
         self.update()
         self.west = self.winfo_rootx()
@@ -98,9 +113,6 @@ class GreaTK(tk.Tk):
 
     def StopResize(self, event):
         self.unbind("<B1-Motion>", self.b4)
-        self.b1 = self.bind("<ButtonPress-1>", self.StartMove)
-        self.b2 = self.bind("<ButtonRelease-1>", self.StopMove)
-        self.b3 = self.bind("<B1-Motion>", self.MoveWindow)
 
     def ResizeWindow(self, e):
         x = self.winfo_pointerx()
@@ -164,3 +176,23 @@ class GreaTK(tk.Tk):
 
     def Iconify(self, event):
         windll.user32.ShowWindow(windll.user32.GetParent(self.winfo_id()),6)
+
+    def imageCanvas(self, imguri):
+        try:
+            img = Image.open(BytesIO(urlopen(imguri).read()))
+        except ValueError:
+            img = Image.open(open(imguri, 'rb'))
+        img = img.resize((200,200))
+        imgtk = ImageTk.PhotoImage(img)
+        canvas = tk.Canvas(self, width=img.width, height=img.height)
+        canvas.create_image(0, 0, image=imgtk, anchor='nw')
+        canvas.image = imgtk
+        canvas.pack()
+
+if __name__ == "__main__":
+    app = greatk(True, 1000, 800)
+
+    app.imageCanvas('test.jpg')
+    app.imageCanvas('https://raw.githubusercontent.com/nkmk/python-snippets/master/notebook/data/dst/lena_pillow_resize_nearest.jpg')
+
+    app.mainloop()

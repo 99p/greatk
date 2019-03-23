@@ -1,6 +1,6 @@
-from greatk import GreaTK
+from greatk import greatk
 
-class App(GreaTK):
+class App(greatk):
     def __init__(self):
         super().__init__()
 
